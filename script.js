@@ -119,7 +119,7 @@ window.addEventListener('scroll', () => {
                 setTimeout(() => {
                     isScrollingUp = false;
                 }, 1000);
-            }, 2000);
+            }, 15000);
         }
     }
 });
