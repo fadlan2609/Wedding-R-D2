@@ -21,6 +21,12 @@ enterBtn.addEventListener('click', () => {
     const bgm = document.getElementById('bgm');
     bgm.play().catch(() => {});
     document.getElementById('music-toggle').classList.add('playing');
+    
+    // Update guest name setelah PRD terbuka
+    const guestName = getGuestNameFromURL();
+    if (guestName) {
+        updateGuestName(guestName);
+    }
 });
 
 // ============================================================
@@ -50,10 +56,12 @@ const hamburgerBtn = document.getElementById('hamburger-btn');
 const navMenu = document.getElementById('nav-menu');
 
 // Hamburger toggle
-hamburgerBtn.addEventListener('click', () => {
-    hamburgerBtn.classList.toggle('active');
-    navMenu.classList.toggle('active');
-});
+if (hamburgerBtn) {
+    hamburgerBtn.addEventListener('click', () => {
+        hamburgerBtn.classList.toggle('active');
+        navMenu.classList.toggle('active');
+    });
+}
 
 // Nav links click
 navLinks.forEach(link => {
@@ -65,8 +73,8 @@ navLinks.forEach(link => {
         }
         navLinks.forEach(l => l.classList.remove('active'));
         link.classList.add('active');
-        hamburgerBtn.classList.remove('active');
-        navMenu.classList.remove('active');
+        if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+        if (navMenu) navMenu.classList.remove('active');
     });
 });
 
@@ -89,18 +97,20 @@ sections.forEach(section => navObserver.observe(section));
 // ============================================================
 const scrollTopBtn = document.getElementById('scrollTopBtn');
 
-window.addEventListener('scroll', () => {
-    // Show/hide button
-    if (window.scrollY > 500) {
-        scrollTopBtn.classList.add('show');
-    } else {
-        scrollTopBtn.classList.remove('show');
-    }
-});
+if (scrollTopBtn) {
+    window.addEventListener('scroll', () => {
+        // Show/hide button
+        if (window.scrollY > 500) {
+            scrollTopBtn.classList.add('show');
+        } else {
+            scrollTopBtn.classList.remove('show');
+        }
+    });
 
-scrollTopBtn.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-});
+    scrollTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
 
 // Auto scroll to top when reaching bottom
 let isScrollingUp = false;
@@ -111,7 +121,7 @@ window.addEventListener('scroll', () => {
     
     // Jika sudah di bagian bawah (dengan toleransi 50px)
     if (scrollTop + clientHeight >= scrollHeight - 50) {
-        // Scroll otomatis ke atas setelah 2 detik
+        // Scroll otomatis ke atas setelah 30 detik
         if (!isScrollingUp) {
             isScrollingUp = true;
             setTimeout(() => {
@@ -158,15 +168,20 @@ setInterval(updateCountdown, 1000);
 // ============================================================
 // 7. OPEN INVITATION BUTTON
 // ============================================================
-document.getElementById('open-invitation').addEventListener('click', () => {
-    document.getElementById('info').scrollIntoView({ behavior: 'smooth' });
-});
+const openInvBtn = document.getElementById('open-invitation');
+if (openInvBtn) {
+    openInvBtn.addEventListener('click', () => {
+        document.getElementById('info').scrollIntoView({ behavior: 'smooth' });
+    });
+}
 
 // ============================================================
 // 8. FLOATING HEARTS
 // ============================================================
 function createFloatingHearts() {
     const container = document.getElementById('floating-hearts');
+    if (!container) return;
+    
     const heartSymbols = ['❤', '🤍', '💛', '💗'];
     
     for (let i = 0; i < 20; i++) {
@@ -400,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================================
-// 12. RSVP - GOOGLE SHEETS INTEGRATION (FIXED)
+// 12. RSVP - GOOGLE SHEETS INTEGRATION
 // ============================================================
 
 // Ganti URL ini dengan URL Apps Script Anda setelah deploy
@@ -491,7 +506,7 @@ async function submitRSVP(formData) {
             Keterangan: formData.message
         });
         
-        const response = await fetch(APPS_SCRIPT_URL, {
+        await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
@@ -623,6 +638,47 @@ window.addEventListener('offline', () => {
         rsvpMessage.className = 'rsvp-message error';
         rsvpMessage.textContent = '⚠️ Tidak ada koneksi internet. Data tidak dapat disimpan.';
         rsvpMessage.style.display = 'block';
+    }
+});
+
+// ============================================================
+// 15. GET GUEST NAME FROM URL (Support + for spaces)
+// ============================================================
+
+function getGuestNameFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let guestName = urlParams.get('to');
+    
+    if (guestName) {
+        // Ganti + dengan spasi, lalu decode URI component
+        guestName = guestName.replace(/\+/g, ' ');
+        guestName = decodeURIComponent(guestName);
+        return guestName.trim();
+    }
+    return null;
+}
+
+function updateGuestName(name) {
+    if (name) {
+        const homeGuest = document.getElementById('home-guest-name');
+        if (homeGuest) {
+            homeGuest.textContent = name;
+        }
+        
+        const navGuest = document.getElementById('nav-guest-name');
+        if (navGuest) {
+            navGuest.textContent = name;
+        }
+        
+        console.log('👤 Guest name loaded from URL:', name);
+    }
+}
+
+// Jalankan saat DOM siap
+document.addEventListener('DOMContentLoaded', function() {
+    const guestName = getGuestNameFromURL();
+    if (guestName) {
+        updateGuestName(guestName);
     }
 });
 
