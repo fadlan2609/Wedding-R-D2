@@ -84,21 +84,48 @@ const navObserver = new IntersectionObserver((entries) => {
 
 sections.forEach(section => navObserver.observe(section));
 
-// Hide/show nav on scroll
-let lastScroll = 0;
-const headerNav = document.getElementById('header-nav');
+// ============================================================
+// 5. SCROLL TO TOP BUTTON
+// ============================================================
+const scrollTopBtn = document.getElementById('scrollTopBtn');
+
 window.addEventListener('scroll', () => {
-    const currentScroll = window.pageYOffset;
-    if (currentScroll > 100) {
-        headerNav.classList.add('hidden-nav');
+    // Show/hide button
+    if (window.scrollY > 500) {
+        scrollTopBtn.classList.add('show');
     } else {
-        headerNav.classList.remove('hidden-nav');
+        scrollTopBtn.classList.remove('show');
     }
-    lastScroll = currentScroll;
+});
+
+scrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Auto scroll to top when reaching bottom
+let isScrollingUp = false;
+window.addEventListener('scroll', () => {
+    const scrollHeight = document.documentElement.scrollHeight;
+    const scrollTop = window.scrollY;
+    const clientHeight = window.innerHeight;
+    
+    // Jika sudah di bagian bawah (dengan toleransi 50px)
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+        // Scroll otomatis ke atas setelah 2 detik
+        if (!isScrollingUp) {
+            isScrollingUp = true;
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => {
+                    isScrollingUp = false;
+                }, 1000);
+            }, 2000);
+        }
+    }
 });
 
 // ============================================================
-// 5. COUNTDOWN
+// 6. COUNTDOWN
 // ============================================================
 const targetDate = new Date('2026-07-24T08:00:00').getTime();
 
@@ -129,14 +156,14 @@ updateCountdown();
 setInterval(updateCountdown, 1000);
 
 // ============================================================
-// 6. OPEN INVITATION BUTTON
+// 7. OPEN INVITATION BUTTON
 // ============================================================
 document.getElementById('open-invitation').addEventListener('click', () => {
     document.getElementById('info').scrollIntoView({ behavior: 'smooth' });
 });
 
 // ============================================================
-// 7. FLOATING HEARTS
+// 8. FLOATING HEARTS
 // ============================================================
 function createFloatingHearts() {
     const container = document.getElementById('floating-hearts');
@@ -174,7 +201,7 @@ heartStyle.textContent = `
 document.head.appendChild(heartStyle);
 
 // ============================================================
-// 8. SCROLL DOWN BUTTONS
+// 9. SCROLL DOWN BUTTONS
 // ============================================================
 document.querySelectorAll('.scroll-down-btn-small').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -187,7 +214,7 @@ document.querySelectorAll('.scroll-down-btn-small').forEach(btn => {
 });
 
 // ============================================================
-// 9. GALLERY - AESTHETIC MODERN
+// 10. GALLERY
 // ============================================================
 const galleryImages = [
     'assets/galeri/1.jpeg',
@@ -234,7 +261,7 @@ if (galleryGrid) {
 }
 
 // ============================================================
-// 10. LIGHTBOX - ENHANCED
+// 11. LIGHTBOX
 // ============================================================
 const lightbox = document.getElementById('lightbox-modal');
 const lightboxImg = document.getElementById('lightbox-img');
@@ -373,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================================
-// 11. RSVP - GOOGLE SHEETS INTEGRATION
+// 12. RSVP - GOOGLE SHEETS INTEGRATION
 // ============================================================
 
 // Ganti URL ini dengan URL Apps Script Anda setelah deploy
@@ -489,7 +516,7 @@ loadRSVP();
 setInterval(loadRSVP, 30000);
 
 // ============================================================
-// 12. AOS INIT
+// 13. AOS INIT
 // ============================================================
 AOS.init({
     duration: 800,
@@ -498,7 +525,7 @@ AOS.init({
 });
 
 // ============================================================
-// 13. CEK KONEKSI INTERNET
+// 14. CEK KONEKSI INTERNET
 // ============================================================
 window.addEventListener('online', () => {
     loadRSVP();
