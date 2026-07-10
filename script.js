@@ -119,7 +119,7 @@ window.addEventListener('scroll', () => {
                 setTimeout(() => {
                     isScrollingUp = false;
                 }, 1000);
-            }, 15000);
+            }, 30000);
         }
     }
 });
@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================================
-// 12. RSVP - GOOGLE SHEETS INTEGRATION
+// 12. RSVP - GOOGLE SHEETS INTEGRATION (FIXED)
 // ============================================================
 
 // Ganti URL ini dengan URL Apps Script Anda setelah deploy
@@ -410,136 +410,220 @@ const rsvpForm = document.getElementById('rsvp-form');
 const rsvpTableBody = document.getElementById('rsvp-table-body');
 const rsvpMessage = document.getElementById('rsvp-status-message');
 
-// Load Data dari Google Sheets
+// ===== FUNGSI: Escape HTML =====
+function escapeHtml(text) {
+    if (!text) return '-';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== FUNGSI: Load Data dari Google Sheets =====
 async function loadRSVP() {
+    if (!rsvpTableBody) return;
+    
     try {
-        rsvpTableBody.innerHTML = `<tr><td colspan="5" class="rsvp-loading">⏳ Memuat data...</td></tr>`;
+        rsvpTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: #b8a99a;">
+            <i class="fas fa-spinner fa-pulse"></i> Memuat data...
+        </td></tr>`;
         
         const response = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
         const result = await response.json();
         
-        if (result.status === 'success' && result.data && result.data.length > 0) {
+        console.log('📊 RSVP Data:', result);
+        
+        if (result.success && result.data && result.data.length > 0) {
             const data = result.data;
+            let html = '';
             
-            if (data.length === 0) {
-                rsvpTableBody.innerHTML = `<tr><td colspan="5" class="rsvp-loading">📭 Belum ada konfirmasi</td></tr>`;
-                return;
-            }
+            data.forEach(row => {
+                const timestamp = row.Timestamp || row.timestamp || '-';
+                const namaTamu = row.Nama_Tamu || row.name || '-';
+                let statusKehadiran = row.Status_Kehadiran || row.status || '-';
+                
+                // Format status dengan emoji
+                if (statusKehadiran === 'Hadir') statusKehadiran = '✅ Hadir';
+                else if (statusKehadiran === 'Tidak Hadir') statusKehadiran = '❌ Tidak Hadir';
+                else if (statusKehadiran === 'Ragu') statusKehadiran = '🤔 Ragu';
+                
+                const jumlahTamu = row.Jumlah_Tamu || row.guests || '0';
+                const keterangan = row.Keterangan || row.message || '-';
+                
+                html += `
+                    <tr>
+                        <td>${escapeHtml(timestamp)}</td>
+                        <td>${escapeHtml(namaTamu)}</td>
+                        <td>${escapeHtml(statusKehadiran)}</td>
+                        <td>${escapeHtml(jumlahTamu)}</td>
+                        <td>${escapeHtml(keterangan)}</td>
+                    </tr>
+                `;
+            });
             
-            rsvpTableBody.innerHTML = data.map(row => `
-                <tr>
-                    <td>${row.timestamp || '-'}</td>
-                    <td>${row.name || '-'}</td>
-                    <td>${row.status || '-'}</td>
-                    <td>${row.guests || '-'}</td>
-                    <td>${row.message || '-'}</td>
-                </tr>
-            `).join('');
+            rsvpTableBody.innerHTML = html;
         } else {
-            rsvpTableBody.innerHTML = `<tr><td colspan="5" class="rsvp-loading">📭 Belum ada konfirmasi</td></tr>`;
+            rsvpTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: #b8a99a;">
+                ✨ Belum ada konfirmasi. Jadilah yang pertama! ✨
+            </td></tr>`;
         }
     } catch (error) {
-        console.error('Error loading RSVP:', error);
-        rsvpTableBody.innerHTML = `<tr><td colspan="5" class="rsvp-loading">⚠️ Gagal memuat data. Refresh halaman.</td></tr>`;
+        console.error('❌ Error loading RSVP:', error);
+        rsvpTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color: #e74c3c;">
+            ⚠️ Gagal memuat data. Silakan refresh halaman.
+        </td></tr>`;
     }
 }
 
-// Submit Data ke Google Sheets
+// ===== FUNGSI: Submit Data ke Google Sheets =====
 async function submitRSVP(formData) {
     try {
+        // Kirim data sebagai URL encoded (lebih reliable)
+        const params = new URLSearchParams();
+        params.append('Nama_Tamu', formData.name);
+        params.append('Status_Kehadiran', formData.status);
+        params.append('Jumlah_Tamu', formData.guests);
+        params.append('Keterangan', formData.message);
+        
+        console.log('📤 Sending data:', {
+            Nama_Tamu: formData.name,
+            Status_Kehadiran: formData.status,
+            Jumlah_Tamu: formData.guests,
+            Keterangan: formData.message
+        });
+        
         const response = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: JSON.stringify({
-                action: 'addData',
-                ...formData
-            })
+            body: params.toString()
         });
         
-        return { status: 'success' };
+        // Karena mode no-cors, response tidak bisa dibaca
+        // Tapi data tetap terkirim
+        console.log('✅ Data terkirim (no-cors mode)');
+        return { success: true };
+        
     } catch (error) {
-        console.error('Error submitting RSVP:', error);
+        console.error('❌ Error submitting RSVP:', error);
         throw error;
     }
 }
 
-// Event: Submit Form
-rsvpForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const name = document.getElementById('rsvp-name').value.trim();
-    const status = document.getElementById('rsvp-status').value;
-    const guests = document.getElementById('rsvp-guests').value || '1';
-    const message = document.getElementById('rsvp-message').value.trim();
+// ===== EVENT: Submit Form =====
+if (rsvpForm) {
+    rsvpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const name = document.getElementById('rsvp-name').value.trim();
+        const status = document.getElementById('rsvp-status').value;
+        const guests = document.getElementById('rsvp-guests').value || '1';
+        const message = document.getElementById('rsvp-message').value.trim();
 
-    if (!name || !status) {
-        rsvpMessage.className = 'rsvp-message error';
-        rsvpMessage.textContent = '⚠️ Mohon isi Nama dan Status Kehadiran.';
-        return;
-    }
+        // Validasi
+        if (!name) {
+            rsvpMessage.className = 'rsvp-message error';
+            rsvpMessage.textContent = '⚠️ Mohon isi Nama Lengkap Anda.';
+            rsvpMessage.style.display = 'block';
+            return;
+        }
+        
+        if (!status) {
+            rsvpMessage.className = 'rsvp-message error';
+            rsvpMessage.textContent = '⚠️ Mohon pilih Status Kehadiran.';
+            rsvpMessage.style.display = 'block';
+            return;
+        }
 
-    const submitBtn = rsvpForm.querySelector('.btn-submit-glass');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+        // Disable button
+        const submitBtn = rsvpForm.querySelector('.btn-submit-glass');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
 
-    try {
-        const formData = { name, status, guests, message };
-        await submitRSVP(formData);
-        
-        rsvpForm.reset();
-        rsvpMessage.className = 'rsvp-message success';
-        rsvpMessage.textContent = '✅ Terima kasih! Konfirmasi Anda telah tercatat.';
-        
-        document.getElementById('nav-guest-name').textContent = name;
-        document.getElementById('home-guest-name').textContent = name;
-        
-        setTimeout(() => {
-            loadRSVP();
-        }, 1500);
-        
-    } catch (error) {
-        rsvpMessage.className = 'rsvp-message error';
-        rsvpMessage.textContent = '❌ Gagal mengirim. Silakan coba lagi.';
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Konfirmasi';
-    }
+        // Tampilkan loading
+        rsvpMessage.className = 'rsvp-message info';
+        rsvpMessage.textContent = '⏳ Mengirim konfirmasi...';
+        rsvpMessage.style.display = 'block';
+
+        try {
+            const formData = { name, status, guests, message };
+            await submitRSVP(formData);
+            
+            // Reset form
+            rsvpForm.reset();
+            
+            // Tampilkan pesan sukses
+            rsvpMessage.className = 'rsvp-message success';
+            rsvpMessage.textContent = '✅ Terima kasih! Konfirmasi Anda telah tercatat.';
+            rsvpMessage.style.display = 'block';
+            
+            // Update guest name
+            document.getElementById('nav-guest-name').textContent = name;
+            document.getElementById('home-guest-name').textContent = name;
+            
+            // Reload data setelah submit
+            setTimeout(() => {
+                loadRSVP();
+            }, 2000);
+            
+            // Sembunyikan pesan setelah 5 detik
+            setTimeout(() => {
+                rsvpMessage.style.display = 'none';
+            }, 5000);
+            
+        } catch (error) {
+            console.error('❌ Submit error:', error);
+            rsvpMessage.className = 'rsvp-message error';
+            rsvpMessage.textContent = '❌ Gagal mengirim. Silakan coba lagi.';
+            rsvpMessage.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Konfirmasi';
+        }
+    });
+}
+
+// ===== LOAD DATA SAAT HALAMAN DIBUKA =====
+document.addEventListener('DOMContentLoaded', () => {
+    loadRSVP();
 });
 
-// Load data saat halaman dibuka
-loadRSVP();
-
-// Refresh data setiap 30 detik
+// ===== REFRESH DATA SETIAP 30 DETIK =====
 setInterval(loadRSVP, 30000);
 
 // ============================================================
 // 13. AOS INIT
 // ============================================================
-AOS.init({
-    duration: 800,
-    once: true,
-    offset: 50,
-});
+if (typeof AOS !== 'undefined') {
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 50,
+    });
+}
 
 // ============================================================
 // 14. CEK KONEKSI INTERNET
 // ============================================================
 window.addEventListener('online', () => {
     loadRSVP();
-    rsvpMessage.className = 'rsvp-message success';
-    rsvpMessage.textContent = '📶 Koneksi kembali. Data diperbarui.';
-    setTimeout(() => {
-        rsvpMessage.textContent = '';
-        rsvpMessage.className = 'rsvp-message';
-    }, 3000);
+    if (rsvpMessage) {
+        rsvpMessage.className = 'rsvp-message success';
+        rsvpMessage.textContent = '📶 Koneksi kembali. Data diperbarui.';
+        rsvpMessage.style.display = 'block';
+        setTimeout(() => {
+            rsvpMessage.style.display = 'none';
+        }, 3000);
+    }
 });
 
 window.addEventListener('offline', () => {
-    rsvpMessage.className = 'rsvp-message error';
-    rsvpMessage.textContent = '⚠️ Tidak ada koneksi internet. Data tidak dapat disimpan.';
+    if (rsvpMessage) {
+        rsvpMessage.className = 'rsvp-message error';
+        rsvpMessage.textContent = '⚠️ Tidak ada koneksi internet. Data tidak dapat disimpan.';
+        rsvpMessage.style.display = 'block';
+    }
 });
 
 console.log('✅ Undangan Ririn & Diki siap!');
